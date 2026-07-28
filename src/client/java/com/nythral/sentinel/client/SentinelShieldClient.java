@@ -1,10 +1,11 @@
 package com.nythral.sentinel.client;
 
+import com.nythral.sentinel.client.config.SentinelConfigManager;
 import net.fabricmc.api.ClientModInitializer;
 
-public class SentinelShieldClient implements ClientModInitializer {
+public final class SentinelShieldClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
-		// This entrypoint is suitable for setting up client-specific logic, such as rendering.
+		SentinelConfigManager.load();
 	}
 }
