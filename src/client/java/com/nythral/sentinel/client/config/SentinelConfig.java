@@ -2,22 +2,20 @@ package com.nythral.sentinel.client.config;
 
 public final class SentinelConfig {
 	public boolean enabled = true;
-	public boolean fixRemoteShieldAnimation = true;
+	public boolean shieldBreakFlash = true;
 
-	public ShieldColorConfig ready = new ShieldColorConfig(true, "#55FF55", 0.25F);
-	public ShieldColorConfig delay = new ShieldColorConfig(true, "#FFFF55", 0.55F);
-	public ShieldColorConfig cooldown = new ShieldColorConfig(true, "#FF5555", 0.75F);
+	public ShieldColorConfig ready = new ShieldColorConfig("#55FF55", 1.0F);
+	public ShieldColorConfig delay = new ShieldColorConfig("#FFFF55", 1.0F);
+	public ShieldColorConfig cooldown = new ShieldColorConfig("#FF5555", 1.0F);
 
 	public static final class ShieldColorConfig {
-		public boolean enabled;
 		public String color;
 		public float strength;
 
 		public ShieldColorConfig() {
 		}
 
-		public ShieldColorConfig(boolean enabled, String color, float strength) {
-			this.enabled = enabled;
+		public ShieldColorConfig(String color, float strength) {
 			this.color = color;
 			this.strength = strength;
 		}
