@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "sentinel-shield",
+	"version": "${version}",
+	"name": "Sentinel Shield",
+	"description": "A lightweight client-side PvP mod that colors shields based on their current state.",
+	"authors": [
+		"Uriaras"
+	],
+	"contact": {
+		"sources": "https://github.com/Uriaras/sentinel-shield",
+		"issues": "https://github.com/Uriaras/sentinel-shield/issues"
+	},
+	"license": "MIT",
+	"icon": "assets/sentinel-shield/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"com.nythral.sentinel.client.SentinelShieldClient"
+		],
+		"modmenu": [
+			"com.nythral.sentinel.client.compat.SentinelModMenuIntegration"
+		]
+	},
+	"mixins": [
+		{
+			"config": "sentinel-shield.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": ">=0.141.6+1.21.11",
+		"nythral-lib": ">=1.0.0"
+	},
+	"suggests": {
+		"modmenu": "*"
+	}
+}
