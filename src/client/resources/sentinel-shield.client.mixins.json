@@ -3,8 +3,8 @@
 	"package": "com.nythral.sentinel.client.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"ShieldSpecialRendererMixin",
-		"GuiRendererMixin"
+		"PlayerItemInHandLayerMixin",
+		"ShieldSpecialRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -16,130 +16,66 @@ public final class SentinelSettingsScreen extends NythralStyledScreen {
 	private final Screen parent;
 
 	private Button enabledButton;
-	private Button shieldBreakFlashButton;
+	private Button smoothCooldownButton;
 
 	private EditBox readyColorField;
 	private EditBox delayColorField;
 	private EditBox cooldownColorField;
 
 	public SentinelSettingsScreen(Screen parent) {
-		super(
-			Component.literal(
-				"Sentinel Shield"
-			)
-		);
-
+		super(Component.literal("Sentinel Shield"));
 		this.parent = parent;
 	}
 
 	@Override
 	protected void init() {
-		SentinelConfig config =
-			SentinelConfigManager.get();
+		SentinelConfig config = SentinelConfigManager.get();
 
 		this.enabledButton = addLeftButton(
 			0,
 			enabledText(),
 			button -> {
-				config.enabled =
-					!config.enabled;
-
+				config.enabled = !config.enabled;
 				refreshLabels();
 				SentinelConfigManager.save();
 			}
 		);
 
-		this.shieldBreakFlashButton = addRightButton(
+		this.smoothCooldownButton = addRightButton(
 			0,
-			shieldBreakFlashText(),
+			smoothCooldownText(),
 			button -> {
-				config.shieldBreakFlash =
-					!config.shieldBreakFlash;
+				config.smoothCooldownColor =
+					!config.smoothCooldownColor;
 
 				refreshLabels();
 				SentinelConfigManager.save();
 			}
 		);
 
-		addRenderableWidget(
-			new StrengthSlider(
-				leftColumnX(),
-				rowY(1),
-				CONTROL_WIDTH,
-				CONTROL_HEIGHT,
-				"Ready Strength",
-				config.ready.strength,
-				value -> {
-					config.ready.strength =
-						(float) value;
-
-					SentinelConfigManager.save();
-				}
-			)
+		addColorRow(
+			1,
+			"Ready",
+			config.ready,
+			field -> this.readyColorField = field
 		);
 
-		this.readyColorField = createColorField(
-			rightColumnX(),
-			rowY(1),
-			"Ready Color",
-			config.ready.color,
-			value -> config.ready.color = value
+		addColorRow(
+			2,
+			"Delay",
+			config.delay,
+			field -> this.delayColorField = field
 		);
 
-		addRenderableWidget(
-			new StrengthSlider(
-				leftColumnX(),
-				rowY(2),
-				CONTROL_WIDTH,
-				CONTROL_HEIGHT,
-				"Delay Strength",
-				config.delay.strength,
-				value -> {
-					config.delay.strength =
-						(float) value;
-
-					SentinelConfigManager.save();
-				}
-			)
-		);
-
-		this.delayColorField = createColorField(
-			rightColumnX(),
-			rowY(2),
-			"Delay Color",
-			config.delay.color,
-			value -> config.delay.color = value
-		);
-
-		addRenderableWidget(
-			new StrengthSlider(
-				leftColumnX(),
-				rowY(3),
-				CONTROL_WIDTH,
-				CONTROL_HEIGHT,
-				"Cooldown Strength",
-				config.cooldown.strength,
-				value -> {
-					config.cooldown.strength =
-						(float) value;
-
-					SentinelConfigManager.save();
-				}
-			)
-		);
-
-		this.cooldownColorField = createColorField(
-			rightColumnX(),
-			rowY(3),
-			"Cooldown Color",
-			config.cooldown.color,
-			value -> config.cooldown.color = value
+		addColorRow(
+			3,
+			"Cooldown",
+			config.cooldown,
+			field -> this.cooldownColorField = field
 		);
 
 		addLeftFooterButton(
-			Component.literal(
-				"Reset Settings"
-			),
+			Component.literal("Reset"),
 			button -> {
 				SentinelConfigManager.reset();
 				rebuildWidgets();
@@ -147,17 +83,44 @@ public final class SentinelSettingsScreen extends NythralStyledScreen {
 		);
 
 		addRightFooterButton(
-			Component.literal(
-				"Done"
-			),
+			Component.literal("Done"),
 			button -> onClose()
 		);
+	}
+
+	private void addColorRow(
+		int row,
+		String label,
+		SentinelConfig.ShieldColorConfig colorConfig,
+		Consumer<EditBox> fieldSetter
+	) {
+		addRenderableWidget(
+			new StrengthSlider(
+				leftColumnX(),
+				rowY(row),
+				CONTROL_WIDTH,
+				CONTROL_HEIGHT,
+				label + " Strength",
+				colorConfig.strength,
+				value -> colorConfig.strength = (float) value
+			)
+		);
+
+		EditBox field = createColorField(
+			rightColumnX(),
+			rowY(row),
+			label + " Color",
+			colorConfig.color,
+			value -> colorConfig.color = value
+		);
+
+		fieldSetter.accept(field);
 	}
 
 	private EditBox createColorField(
 		int x,
 		int y,
-		String hint,
+		String label,
 		String initialValue,
 		Consumer<String> setter
 	) {
@@ -167,92 +130,68 @@ public final class SentinelSettingsScreen extends NythralStyledScreen {
 			y,
 			CONTROL_WIDTH,
 			CONTROL_HEIGHT,
-			Component.literal(
-				hint
-			)
+			Component.literal(label)
 		);
 
-		field.setMaxLength(
-			7
-		);
-
-		field.setValue(
-			initialValue
-		);
-
-		field.setHint(
-			Component.literal(
-				"#RRGGBB"
-			)
-		);
+		field.setMaxLength(7);
+		field.setValue(initialValue);
+		field.setHint(Component.literal("#RRGGBB"));
 
 		field.setResponder(
 			value -> {
-				if (!SentinelConfigManager.isValidHexColor(value)) {
-					return;
+				if (
+					SentinelConfigManager.isValidHexColor(value)
+				) {
+					setter.accept(
+						SentinelConfigManager
+							.normalizeHexColor(value)
+					);
 				}
-
-				setter.accept(
-					SentinelConfigManager.normalizeHexColor(
-						value
-					)
-				);
-
-				SentinelConfigManager.save();
 			}
 		);
 
-		return addRenderableWidget(
-			field
-		);
+		return addRenderableWidget(field);
 	}
 
 	private Component enabledText() {
 		return Component.literal(
 			"Enabled: "
 				+ onOff(
-					SentinelConfigManager
-						.get()
-						.enabled
+					SentinelConfigManager.get().enabled
 				)
 		);
 	}
 
-	private Component shieldBreakFlashText() {
+	private Component smoothCooldownText() {
 		return Component.literal(
-			"Shield Break Flash: "
+			"Smooth Cooldown: "
 				+ onOff(
 					SentinelConfigManager
 						.get()
-						.shieldBreakFlash
+						.smoothCooldownColor
 				)
 		);
 	}
 
 	private static String onOff(boolean value) {
-		return value
-			? "On"
-			: "Off";
+		return value ? "On" : "Off";
 	}
 
 	private void refreshLabels() {
-		this.enabledButton.setMessage(
-			enabledText()
-		);
+		this.enabledButton.setMessage(enabledText());
 
-		this.shieldBreakFlashButton.setMessage(
-			shieldBreakFlashText()
+		this.smoothCooldownButton.setMessage(
+			smoothCooldownText()
 		);
 	}
 
 	@Override
 	public void onClose() {
 		saveColorFields();
+		SentinelConfigManager.save();
 
 		if (this.minecraft != null) {
-			this.minecraft.setScreen(
-				this.parent
-			);
+			this.minecraft.setScreen(this.parent);
 		}
 	}
 
@@ -280,24 +219,24 @@ public final class SentinelSettingsScreen extends NythralStyledScreen {
 				.cooldown
 				.color = value
 		);
-
-		SentinelConfigManager.save();
 	}
 
 	private static void saveColorField(
 		EditBox field,
 		Consumer<String> setter
 	) {
-		String value =
-			field.getValue();
-
-		if (!SentinelConfigManager.isValidHexColor(value)) {
+		if (
+			field == null
+				|| !SentinelConfigManager.isValidHexColor(
+					field.getValue()
+				)
+		) {
 			return;
 		}
 
 		setter.accept(
 			SentinelConfigManager.normalizeHexColor(
-				value
+				field.getValue()
 			)
 		);
 	}
@@ -325,9 +264,7 @@ public final class SentinelSettingsScreen extends NythralStyledScreen {
 				width,
 				height,
 				Component.empty(),
-				snap(
-					initialValue
-				)
+				snap(initialValue)
 			);
 
 			this.label = label;
@@ -338,33 +275,21 @@ public final class SentinelSettingsScreen extends NythralStyledScreen {
 
 		@Override
 		protected void updateMessage() {
-			int percent =
-				(int) Math.round(
-					snap(
-						this.value
-					) * 100.0
-				);
+			int percent = (int) Math.round(
+				snap(this.value) * 100.0
+			);
 
 			setMessage(
 				Component.literal(
-					this.label
-						+ ": "
-						+ percent
-						+ "%"
+					this.label + ": " + percent + "%"
 				)
 			);
 		}
 
 		@Override
 		protected void applyValue() {
-			this.value = snap(
-				this.value
-			);
-
-			this.setter.accept(
-				this.value
-			);
-
+			this.value = snap(this.value);
+			this.setter.accept(this.value);
 			updateMessage();
 		}
 
@@ -375,19 +300,15 @@ public final class SentinelSettingsScreen extends NythralStyledScreen {
 				1.0
 			);
 
-			int level =
+			int level = Math.clamp(
 				(int) Math.round(
 					clamped * LEVELS
-				);
-
-			level = Math.clamp(
-				level,
+				),
 				0,
 				LEVELS
 			);
 
-			return level
-				/ (double) LEVELS;
+			return level / (double) LEVELS;
 		}
 	}
 }

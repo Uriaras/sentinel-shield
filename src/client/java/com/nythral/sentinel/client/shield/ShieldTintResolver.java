@@ -8,75 +8,119 @@ public final class ShieldTintResolver {
 	private ShieldTintResolver() {
 	}
 
-	public static ShieldTint resolve(ShieldState state) {
+	public static ShieldTint resolve(
+		PlayerShieldState playerState
+	) {
 		SentinelConfig config =
 			SentinelConfigManager.get();
 
-		if (!config.enabled) {
+		if (
+			!config.enabled
+				|| playerState == null
+				|| playerState.state() == null
+		) {
 			return ShieldTint.NONE;
 		}
 
+		if (
+			playerState.state() == ShieldState.COOLDOWN
+				&& config.smoothCooldownColor
+		) {
+			return interpolateCooldown(
+				config,
+				playerState.cooldownProgress()
+			);
+		}
+
 		SentinelConfig.ShieldColorConfig colorConfig =
-			switch (state) {
-				case READY -> config.ready;
+			switch (playerState.state()) {
+				case READY, ACTIVE -> config.ready;
 				case DELAY -> config.delay;
 				case COOLDOWN -> config.cooldown;
 			};
 
-		if (colorConfig == null || colorConfig.strength <= 0.0F) {
-			return ShieldTint.NONE;
-		}
+		return resolveColor(colorConfig);
+	}
 
-		return fromHex(
-			colorConfig.color,
-			colorConfig.strength
+	private static ShieldTint interpolateCooldown(
+		SentinelConfig config,
+		float cooldownProgress
+	) {
+		ShieldTint readyTint =
+			resolveColor(config.ready);
+
+		ShieldTint cooldownTint =
+			resolveColor(config.cooldown);
+
+		float progress = Math.clamp(
+			cooldownProgress,
+			0.0F,
+			1.0F
+		);
+
+		return new ShieldTint(
+			lerp(
+				readyTint.red(),
+				cooldownTint.red(),
+				progress
+			),
+			lerp(
+				readyTint.green(),
+				cooldownTint.green(),
+				progress
+			),
+			lerp(
+				readyTint.blue(),
+				cooldownTint.blue(),
+				progress
+			),
+			lerp(
+				readyTint.strength(),
+				cooldownTint.strength(),
+				progress
+			)
 		);
 	}
 
-	private static ShieldTint fromHex(
-		String hex,
-		float strength
+	private static ShieldTint resolveColor(
+		SentinelConfig.ShieldColorConfig colorConfig
 	) {
-		if (!SentinelConfigManager.isValidHexColor(hex)) {
+		if (
+			colorConfig == null
+				|| !SentinelConfigManager.isValidHexColor(
+					colorConfig.color
+				)
+		) {
 			return ShieldTint.NONE;
 		}
 
-		String normalized =
-			SentinelConfigManager.normalizeHexColor(hex)
-				.substring(1);
-
-		int rgb;
+		String hex = SentinelConfigManager
+			.normalizeHexColor(colorConfig.color)
+			.substring(1);
 
 		try {
-			rgb = Integer.parseInt(
-				normalized,
-				16
+			int rgb = Integer.parseInt(hex, 16);
+
+			return new ShieldTint(
+				((rgb >> 16) & 0xFF) / 255.0F,
+				((rgb >> 8) & 0xFF) / 255.0F,
+				(rgb & 0xFF) / 255.0F,
+				Math.clamp(
+					colorConfig.strength,
+					0.0F,
+					1.0F
+				)
 			);
 		} catch (NumberFormatException exception) {
 			return ShieldTint.NONE;
 		}
+	}
 
-		float red =
-			((rgb >> 16) & 0xFF)
-				/ 255.0F;
-
-		float green =
-			((rgb >> 8) & 0xFF)
-				/ 255.0F;
-
-		float blue =
-			(rgb & 0xFF)
-				/ 255.0F;
-
-		return new ShieldTint(
-			red,
-			green,
-			blue,
-			Math.clamp(
-				strength,
-				0.0F,
-				1.0F
-			)
-		);
+	private static float lerp(
+		float start,
+		float end,
+		float progress
+	) {
+		return start + (end - start) * progress;
 	}
 }

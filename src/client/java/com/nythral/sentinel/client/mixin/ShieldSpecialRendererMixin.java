@@ -30,17 +30,17 @@ public abstract class ShieldSpecialRendererMixin {
 		at = @At("HEAD")
 	)
 	private void sentinelShield$captureDisplayContext(
-		DataComponentMap dataComponentMap,
-		ItemDisplayContext itemDisplayContext,
+		DataComponentMap components,
+		ItemDisplayContext displayContext,
 		PoseStack poseStack,
-		SubmitNodeCollector submitNodeCollector,
+		SubmitNodeCollector collector,
 		int light,
 		int overlay,
 		boolean glint,
 		int outlineColor,
 		CallbackInfo callbackInfo
 	) {
-		SENTINEL_DISPLAY_CONTEXT.set(itemDisplayContext);
+		SENTINEL_DISPLAY_CONTEXT.set(displayContext);
 	}
 
 	@Redirect(
@@ -71,12 +71,14 @@ public abstract class ShieldSpecialRendererMixin {
 
 		if (shouldTint(displayContext)) {
 			ShieldTint tint =
-				SentinelShieldRenderContext.resolveLocalShieldTint();
+				SentinelShieldRenderContext.resolveShieldTint(
+					displayContext
+				);
 
 			if (tint.enabled()) {
-				color = createTextureTint(
-					tint,
-					displayContext
+				color = mixColor(
+					originalColor,
+					tint
 				);
 			}
 		}
@@ -101,10 +103,10 @@ public abstract class ShieldSpecialRendererMixin {
 		at = @At("RETURN")
 	)
 	private void sentinelShield$clearDisplayContext(
-		DataComponentMap dataComponentMap,
-		ItemDisplayContext itemDisplayContext,
+		DataComponentMap components,
+		ItemDisplayContext displayContext,
 		PoseStack poseStack,
-		SubmitNodeCollector submitNodeCollector,
+		SubmitNodeCollector collector,
 		int light,
 		int overlay,
 		boolean glint,
@@ -123,13 +125,15 @@ public abstract class ShieldSpecialRendererMixin {
 			|| displayContext
 			== ItemDisplayContext.FIRST_PERSON_RIGHT_HAND
 			|| displayContext
-			== ItemDisplayContext.GUI;
+			== ItemDisplayContext.THIRD_PERSON_LEFT_HAND
+			|| displayContext
+			== ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
 	}
 
 	@Unique
-	private static int createTextureTint(
-		ShieldTint tint,
-		ItemDisplayContext displayContext
+	private static int mixColor(
+		int originalColor,
+		ShieldTint tint
 	) {
 		float strength = Math.clamp(
 			tint.strength(),
@@ -137,49 +141,73 @@ public abstract class ShieldSpecialRendererMixin {
 			1.0F
 		);
 
-		int red = mixWithWhite(
-			tint.red(),
-			strength
-		);
+		int alpha =
+			originalColor >>> 24 & 0xFF;
 
-		int green = mixWithWhite(
-			tint.green(),
-			strength
-		);
+		int originalRed =
+			originalColor >>> 16 & 0xFF;
 
-		int blue = mixWithWhite(
-			tint.blue(),
-			strength
-		);
+		int originalGreen =
+			originalColor >>> 8 & 0xFF;
 
-		int rgb =
-			red << 16
-				| green << 8
-				| blue;
+		int originalBlue =
+			originalColor & 0xFF;
 
-		if (displayContext == ItemDisplayContext.GUI) {
-			return 0xFF000000 | rgb;
+		if (alpha == 0) {
+			alpha = 255;
 		}
 
-		return rgb;
+		int red = mixChannel(
+			originalRed,
+			toChannel(tint.red()),
+			strength
+		);
+
+		int green = mixChannel(
+			originalGreen,
+			toChannel(tint.green()),
+			strength
+		);
+
+		int blue = mixChannel(
+			originalBlue,
+			toChannel(tint.blue()),
+			strength
+		);
+
+		return alpha << 24
+			| red << 16
+			| green << 8
+			| blue;
 	}
 
 	@Unique
-	private static int mixWithWhite(
-		float targetChannel,
+	private static int toChannel(float value) {
+		return Math.clamp(
+			Math.round(
+				Math.clamp(
+					value,
+					0.0F,
+					1.0F
+				) * 255.0F
+			),
+			0,
+			255
+		);
+	}
+
+	@Unique
+	private static int mixChannel(
+		int original,
+		int target,
 		float strength
 	) {
-		float target = Math.clamp(
-			targetChannel,
-			0.0F,
-			1.0F
-		);
-
-		float mixed =
-			1.0F + (target - 1.0F) * strength;
-
 		return Math.clamp(
-			Math.round(mixed * 255.0F),
+			Math.round(
+				original
+					+ (target - original)
+					* strength
+			),
 			0,
 			255
 		);
