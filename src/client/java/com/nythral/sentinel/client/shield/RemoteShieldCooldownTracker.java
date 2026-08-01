@@ -1,5 +1,6 @@
 package com.nythral.sentinel.client.shield;
 
+import com.nythral.sentinel.client.config.SentinelConfigManager;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -20,7 +21,10 @@ public final class RemoteShieldCooldownTracker {
 		Player player,
 		long currentTick
 	) {
-		if (player == null) {
+		if (
+			!SentinelConfigManager.get().enabled
+				|| player == null
+		) {
 			return;
 		}
 
@@ -34,10 +38,18 @@ public final class RemoteShieldCooldownTracker {
 	}
 
 	public static boolean isCoolingDown(Player player) {
+		if (!SentinelConfigManager.get().enabled) {
+			return false;
+		}
+
 		return getCooldown(player) != null;
 	}
 
 	public static float getProgress(Player player) {
+		if (!SentinelConfigManager.get().enabled) {
+			return 0.0F;
+		}
+
 		Cooldown cooldown = getCooldown(player);
 
 		if (cooldown == null) {
@@ -58,6 +70,11 @@ public final class RemoteShieldCooldownTracker {
 	}
 
 	public static void tick(Minecraft minecraft) {
+		if (!SentinelConfigManager.get().enabled) {
+			COOLDOWNS.clear();
+			return;
+		}
+
 		if (minecraft.level == null) {
 			COOLDOWNS.clear();
 			return;
@@ -72,7 +89,10 @@ public final class RemoteShieldCooldownTracker {
 	}
 
 	private static Cooldown getCooldown(Player player) {
-		if (player == null) {
+		if (
+			!SentinelConfigManager.get().enabled
+				|| player == null
+		) {
 			return null;
 		}
 
